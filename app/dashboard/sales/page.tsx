@@ -28,9 +28,6 @@ export default function RevenuePage() {
 
         const result = await res.json();
 
-        // INI PENYEBAB UTAMA BUG!
-        // Kalau API return array → langsung pakai
-        // Kalau return satu object (karena LIMIT 1) → bungkus jadi array
         const dataArray = Array.isArray(result) ? result : [result];
 
         setData(dataArray);
@@ -79,4 +76,8 @@ export default function RevenuePage() {
       </pre>
     </div>
   );
+  <pre className="mt-8 text-xs bg-gray-800 text-green-400 p-4 rounded overflow-auto">
+    Debug Data dari API:
+    {JSON.stringify(data, null, 2)}
+  </pre>;
 }

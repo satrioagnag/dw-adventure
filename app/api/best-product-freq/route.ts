@@ -14,7 +14,7 @@ export async function GET() {
   try {
     connection = await mysql.createConnection(config);
     const [rows] = await connection.execute(
-      "SELECT p.ProductName, SUM(s.TotalRevenue) AS TotalRevenue FROM factsales s JOIN dimproduct p ON s.ProductKey = p.ProductKey JOIN dimdate d ON s.DateKey = d.DateKey WHERE d.Year >= 2001 GROUP BY p.ProductName ORDER BY TotalRevenue DESC LIMIT 1;"
+      "SELECT p.ProductName, SUM(CASE WHEN c.CustomerType = 'Individual' THEN s.OrderCount ELSE 0 END) AS IndividualOrderFrequency, SUM(CASE WHEN c.CustomerType = 'Store' THEN s.OrderCount ELSE 0 END) AS ResellerOrderFrequency FROM factsales s JOIN dimproduct p ON s.ProductKey = p.ProductKey JOIN dimcustomer c ON s.CustomerKey = c.CustomerKey GROUP BY p.ProductName ORDER BY IndividualOrderFrequency DESC LIMIT 1;"
     );
     return NextResponse.json({ success: true, data: rows });
   } catch (error) {

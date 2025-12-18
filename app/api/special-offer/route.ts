@@ -14,7 +14,7 @@ export async function GET() {
   try {
     connection = await mysql.createConnection(config);
     const [rows] = await connection.execute(
-      "SELECT p.ProductName, SUM(s.TotalRevenue) AS TotalRevenue FROM factsales s JOIN dimproduct p ON s.ProductKey = p.ProductKey JOIN dimdate d ON s.DateKey = d.DateKey WHERE d.Year >= 2001 GROUP BY p.ProductName ORDER BY TotalRevenue DESC LIMIT 1;"
+      "SELECT CASE WHEN so.DiscountPct > 0 THEN 'With Discount' ELSE 'Without Discount' END AS DiscountStatus, SUM(s.OrderQuantity) AS TotalQuantity, SUM(s.TotalRevenue) AS TotalRevenue, (SUM(s.OrderQuantity) / (SELECT SUM(OrderQuantity) FROM factsales)) * 100 AS QuantityPercentage FROM factsales s JOIN dimspecialoffer so ON s.SpecialOfferKey = so.SpecialOfferKey GROUP BY DiscountStatus;"
     );
     return NextResponse.json({ success: true, data: rows });
   } catch (error) {
