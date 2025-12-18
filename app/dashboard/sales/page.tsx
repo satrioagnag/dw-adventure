@@ -1,63 +1,74 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import PivotTableUI from 'react-pivottable/PivotTableUI';
+import 'react-pivottable/pivottable.css';
+import { useFilter } from '../../context/FilterContext';
 
 export default function RevenueSalesOverview() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { filters, setFilter } = useFilter();
+  const [revenueData, setRevenueData] = useState([]);
+  const [discountData, setDiscountData] = useState([]);
+  const [olapData, setOlapData] = useState([]);
+  const [drillDown, setDrillDown] = useState(null);
+  const [pivotState, setPivotState] = useState({});
 
   useEffect(() => {
-    fetch('/api/revenue-top-products')
-      .then(res => res.json())
-      .then(result => {
-        // Pastikan selalu array
-        const chartData = Array.isArray(result) ? result : [];
-        setData(chartData);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch('/api/q1-top-revenue').then(res => res.json()),
+      fetch('/api/q2-discount').then(res => res.json()),
+      fetch('/api/olap-cube').then(res => res.json()),
+    ]).then(([rev, disc, olap]) => {
+      setRevenueData(rev);
+      setDiscountData(disc);
+      setOlapData(olap);
+    });
   }, []);
 
-  if (loading) return <div className="text-white text-center py-10">Loading data dari database...</div>;
-  if (data.length === 0) return <div className="text-red-500">Tidak ada data revenue</div>;
+  const filteredRevenue = revenueData.filter(d => !filters.product || d.ProductName === filters.product);
+  const filteredDiscount = discountData.filter(d => !filters.discount || d.DiscountStatus === filters.discount);
+
+  const handleBarClick = (data) => {
+    setFilter('product', data.ProductName);
+    setDrillDown(data.ProductName);  // Drill-down
+  };
+
+  const handlePieClick = (data) => {
+    setFilter('discount', data.DiscountStatus);  // Cross-filter
+  };
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-white mb-8">
-        1. Produk mana yang memberikan kontribusi revenue tertinggi dalam 3 tahun terakhir?
-      </h1>
+    <div className="p-4 space-y-8">
+      <h1 className="text-2xl">Revenue & Promotion Analysis</h1>
 
-      <ResponsiveContainer width="100%" height={500}>
-        <BarChart data={data} margin={{ top: 20, right: 30, left: 50, bottom: 120 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-          <XAxis 
-            dataKey="ProductName" 
-            angle={-45} 
-            textAnchor="end" 
-            height={120}
-            tick={{ fill: '#fff', fontSize: 12 }}
-          />
-          <YAxis tick={{ fill: '#fff' }} />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#333', border: 'none' }}
-            formatter={(value: number | undefined) => value !== undefined ? `Rp ${value.toLocaleString('id-ID', { minimumFractionDigits: 2 })}` : ''}
-          />
-          <Legend />
-          <Bar dataKey="TotalRevenue" fill="#8b5cf6" name="Total Revenue" />
-        </BarChart>
-      </ResponsiveContainer>
+      <section>
+        <h2 className="text-xl">1. Produk mana yang memberikan kontribusi revenue tertinggi dalam 3 tahun terakhir (Top 10)?</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={filteredRevenue} onClick={handleBarClick}>
+            <XAxis dataKey="ProductName" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="TotalRevenue" fill="#8884d8" />
+          </BarChart>
+        </ResponsiveContainer>
+        {drillDown && <p>Drill-down details for {drillDown} (add monthly chart here)</p>}
+      </section>
 
-      {/* Debug (bisa dihapus nanti) */}
-      <details className="mt-8 text-xs text-gray-400">
-        <summary>Lihat data mentah</summary>
-        <pre className="bg-gray-900 p-4 rounded overflow-auto">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      </details>
+      <section>
+        <h2 className="text-xl">2. Seberapa besar pengaruh penggunaan diskon (SpecialOffer) terhadap peningkatan jumlah penjualan?</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie data={filteredDiscount} dataKey="TotalQuantity" nameKey="DiscountStatus" fill="#82ca9d" onClick={handlePieClick} />
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </section>
+
+      <section>
+        <h2 className="text-xl">OLAP Mondrian View (Interaktif Pivot Table)</h2>
+        <PivotTableUI data={olapData} onChange={setPivotState} {...pivotState} />
+      </section>
     </div>
   );
 }
