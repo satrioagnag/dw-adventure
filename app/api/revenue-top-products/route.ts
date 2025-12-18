@@ -14,9 +14,9 @@ export async function GET() {
   try {
     connection = await mysql.createConnection(config);
     const [rows] = await connection.execute(
-      "SELECT p.ProductName, SUM(s.TotalRevenue) AS TotalRevenue FROM factsales s JOIN dimproduct p ON s.ProductKey = p.ProductKey JOIN dimdate d ON s.DateKey = d.DateKey WHERE d.Year >= 2001 GROUP BY p.ProductName ORDER BY TotalRevenue DESC LIMIT 1;"
+      "SELECT p.ProductName, SUM(s.TotalRevenue) AS TotalRevenue FROM factsales s JOIN dimproduct p ON s.ProductKey = p.ProductKey JOIN dimdate d ON s.DateKey = d.DateKey WHERE d.FullDate >= '2001-01-01' AND d.FullDate <= '2004-12-31' GROUP BY p.ProductName ORDER BY TotalRevenue DESC LIMIT 10;"
     );
-    return NextResponse.json({ success: true, data: rows });
+    return NextResponse.json(rows);
   } catch (error) {
     console.error("Database error:", error);
     return NextResponse.json({
