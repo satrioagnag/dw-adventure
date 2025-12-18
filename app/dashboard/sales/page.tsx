@@ -76,8 +76,4 @@ export default function RevenuePage() {
       </pre>
     </div>
   );
-  <pre className="mt-8 text-xs bg-gray-800 text-green-400 p-4 rounded overflow-auto">
-    Debug Data dari API:
-    {JSON.stringify(data, null, 2)}
-  </pre>;
 }
